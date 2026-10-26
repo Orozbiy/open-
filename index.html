@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ky">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0a0d15">
+<title>Түнкү Көчө</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/hud.css">
+<link rel="stylesheet" href="css/menu.css">
+</head>
+<body>
+<canvas id="gl"></canvas>
+
+<!-- ===== Оюндун ичиндеги HUD ===== -->
+<div id="hud" hidden>
+  <!-- сол жогору: деңгээл + миссия -->
+  <div class="hud tl">
+    <div class="lvl"><b id="lvlNum">1</b><div><span>ДЕҢГЭЭЛ</span><i><em id="lvlBar"></em></i></div></div>
+    <div class="mpanel" id="mission" hidden><div class="sub" id="mTitle"></div><div class="mbig" id="mMain"></div><div class="sub" id="mSub"></div></div>
+  </div>
+  <!-- ортоңку жогору: упай тегереги -->
+  <div class="hud score" id="score">
+    <span class="spts" id="scorePts">0</span>
+    <div class="ring"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" class="rbg"/><circle cx="50" cy="50" r="42" class="rfg" id="scoreArc"/></svg><b id="scoreMult">X1</b></div>
+    <span class="slbl" id="scoreLbl"></span>
+  </div>
+  <!-- оң жогору: акча, FPS, баскычтар -->
+  <div class="hud tr">
+    <div class="money"><div id="fps" hidden>60 fps</div><div class="cr"><i>CR</i><b id="cash">0</b></div><div class="delta" id="cashDelta"></div><div class="sub">Рекорд · <span id="best">0</span></div></div>
+    <div class="col">
+      <button class="iconbtn" id="pauseBtn" aria-label="Тыным">II</button>
+      <button class="iconbtn" id="mapBtn" aria-label="Чоң карта">M</button>
+      <button class="iconbtn" id="reset" aria-label="Жолго кайтаруу">R</button>
+      <button class="iconbtn" id="camBtn" aria-label="Камера">C</button>
+      <button class="iconbtn rw" data-ctl="rw" aria-label="Артка тартуу (кармап туруңуз)">⟲</button>
+      <button class="iconbtn ph" id="photoBtn" aria-label="Фото режим жана дрон"><svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M9 4 7.5 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3.5L15 4H9zm3 4.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/></svg></button>
+    </div>
+  </div>
+  <!-- сол ылдый: мини-карта + бензин -->
+  <div class="hud bl">
+    <canvas id="map" width="340" height="340" title="M — чоң карта"></canvas>
+    <div class="blrow"><span class="key">M</span><span class="fuel" id="fuelTxt">БЕНЗИН 40L</span><span class="chip" id="modeChip">SPORT</span><span class="chip season" id="seasonChip" hidden></span></div>
+  </div>
+  <!-- оң ылдый: тахометр -->
+  <canvas class="hud" id="tacho" width="440" height="320"></canvas>
+  <svg id="arrow" class="hud" viewBox="-30 -30 60 60" hidden><path d="M0-24 18 16 0 8-18 16z"/></svg>
+  <div class="hud planehud" id="planeHud" hidden></div>
+  <div class="hud toast" id="toast"><b id="toastT"></b><small id="toastS"></small></div>
+  <div class="hud prompt" id="prompt" hidden><span id="promptT"></span><button class="act" id="promptBtn" hidden></button></div>
+  <div id="count"></div>
+  <div id="speedfx"></div><div id="vignette"></div><div id="rewindfx"><b>⟲ АРТКА</b></div>
+  <div class="ctl l">
+    <div class="pad" data-ctl="left" aria-label="Солго"><svg viewBox="0 0 24 24"><path d="M15 4 6 12l9 8z"/></svg></div>
+    <div class="pad" data-ctl="right" aria-label="Оңго"><svg viewBox="0 0 24 24"><path d="m9 4 9 8-9 8z"/></svg></div>
+  </div>
+  <div class="ctl r">
+    <div class="stack"><div class="pad small n2o" data-ctl="n2o">N2O</div><div class="pad small" data-ctl="brake">ТОРМОЗ</div><div class="pad small" data-ctl="hb">ДРИФТ</div></div>
+    <div class="pad gas" data-ctl="gas">ГАЗ</div>
+  </div>
+</div>
+
+<!-- ===== Чоң карта (M) ===== -->
+<div id="bigmap" hidden>
+  <canvas id="bigcv"></canvas>
+  <div class="bm-head">
+    <div class="bm-brand"><b>КАРТА</b><span id="bmInfo">Каалаган жерди басыңыз</span></div>
+    <div class="bm-player" id="bmPlayer"></div>
+    <button class="iconbtn" id="bmClose" aria-label="Жабуу">✕</button>
+  </div>
+  <div class="bm-legend" id="bmLegend" hidden></div>
+  <div class="bm-event" id="bmEvent" hidden></div>
+  <div class="bm-zoom"><button class="iconbtn" id="bmIn" aria-label="Чоңойтуу">+</button><button class="iconbtn" id="bmOut" aria-label="Кичирейтүү">−</button><button class="iconbtn" id="bmMe" aria-label="Машинага">◎</button></div>
+  <div class="bm-foot">
+    <div class="bm-keys"><span><i>ESC</i>АРТКА</span><span><i>X</i>МАРШРУТ</span><span><i>L</i>ЛЕГЕНДА</span><span><i>+/−</i>МАСШТАБ</span></div>
+    <div class="bm-act"><button class="act ghost" id="bmLeg">ЛЕГЕНДА</button><button class="act ghost" id="bmClear" hidden>БЕЛГИНИ ӨЧҮРҮҮ</button><button class="act ghost" id="bmRoute" disabled>МАРШРУТ</button><button class="act" id="bmGo" disabled>БАРУУ</button></div>
+  </div>
+</div>
+
+<!-- ===== Меню экрандары (menu.js толтурат) ===== -->
+<div id="ui">
+  <section class="screen" id="scr-main" hidden></section>
+  <section class="screen" id="scr-levels" hidden></section>
+  <section class="screen" id="scr-free" hidden></section>
+  <section class="screen" id="scr-garage" hidden></section>
+  <section class="screen" id="scr-settings" hidden></section>
+  <section class="screen dim" id="scr-pause" hidden></section>
+  <section class="screen dim" id="scr-spin" hidden></section>
+  <div id="photo" hidden></div>
+  <section class="screen dim" id="scr-result" hidden></section>
+  <section class="screen loading" id="scr-loading" hidden>
+    <div class="ld-bg"></div>
+    <div class="ld-box">
+      <div class="ld-brand"><small>Ачык дүйнө · Дрифт · Жарыш</small>Түнкү Көчө</div>
+      <div class="ld-level" id="ldName">ЭРКИН АЙДОО</div>
+      <div class="ld-sub" id="ldSub"></div>
+      <div class="ld-bar"><em></em></div>
+      <div class="ld-row"><span id="ldStep">Дүйнө курулууда…</span><span class="ld-dots"><i></i><i></i><i></i></span></div>
+      <div class="ld-tip"><b>КЕҢЕШ</b><span id="ldTip"></span></div>
+    </div>
+  </section>
+</div>
+
+<script src="libs/three.min.js"></script>
+<script src="libs/GLTFLoader.js"></script>
+<script src="js/config.js"></script>
+<script src="js/core/storage.js"></script>
+<script src="js/core/input.js"></script>
+<script src="js/core/audio.js"></script>
+<script src="js/cars/carBuilder.js"></script>
+<script src="js/cars/cars.js"></script>
+<script src="js/cars/physics.js"></script>
+<script src="js/world/environment.js"></script>
+<script src="js/world/mountains.js"></script>
+<script src="js/world/mapCity.js"></script>
+<script src="js/world/nature.js"></script>
+<script src="js/world/props.js"></script>
+<script src="js/world/decor.js"></script>
+<script src="js/world/fx.js"></script>
+<script src="js/world/weather.js"></script>
+<script src="js/world/mapTouge.js"></script>
+<script src="js/world/mapWorld.js"></script>
+<script src="js/levels/levels.js"></script>
+<script src="js/ui/showroom.js"></script>
+<script src="js/ui/hud.js"></script>
+<script src="js/ui/bigmap.js"></script>
+<script src="js/ui/menu.js"></script>
+<script src="js/core/photo.js"></script>
+<script src="js/core/plane.js"></script>
+<script src="js/core/horizon.js"></script>
+<script src="js/core/postfx.js"></script>
+<script src="js/core/game.js"></script>
+</body>
+</html>

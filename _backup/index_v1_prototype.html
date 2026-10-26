@@ -1,0 +1,727 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Түнкү Көчө</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: full-bleed 3D night city; HUD pinned to the corners; touch controls in the two thumb zones */
+:root{
+  --night:#0a0d15;
+  --panel:rgba(12,15,25,.66);
+  --line:rgba(255,181,71,.28);
+  --ink:#eef0f6;
+  --dim:#8f97ab;
+  --amber:#ffb547;
+  --hot:#ff5a4e;
+  --display:'Unbounded','Arial Black',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{
+  background:var(--night);color:var(--ink);overflow:hidden;font-family:var(--mono);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;
+}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
+.hud{position:fixed;pointer-events:none;z-index:5}
+.tl{top:calc(12px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:4px}
+.cash{font:800 22px/1 var(--display);letter-spacing:.02em}
+.cash span{color:var(--amber)}
+.sub{font-size:11px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
+.tr{top:calc(12px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));display:flex;gap:8px;align-items:flex-start}
+#map{width:124px;height:124px;border-radius:50%;background:var(--panel);border:1px solid var(--line)}
+.iconbtn{pointer-events:auto;width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:700 12px var(--mono);cursor:pointer}
+.iconbtn:focus-visible,.go:focus-visible,.sw:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.combo{top:calc(22% + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);text-align:center;transition:opacity .25s;opacity:0}
+.combo.show{opacity:1}
+.combo b{display:block;font:800 clamp(26px,5vw,46px)/1 var(--display);color:var(--amber);text-shadow:0 0 24px rgba(255,181,71,.45);font-variant-numeric:tabular-nums}
+.combo small{font-size:12px;letter-spacing:.2em;color:var(--ink)}
+.combo.crash b{color:var(--hot);text-shadow:0 0 24px rgba(255,90,78,.5)}
+.speedo{bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);text-align:center;min-width:130px}
+.kmh{font:800 44px/1 var(--display);font-variant-numeric:tabular-nums}
+.unit{font-size:11px;color:var(--dim);letter-spacing:.18em}
+.rpm{height:5px;margin-top:8px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden}
+.rpm i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--amber) 70%,var(--hot))}
+.gear{font:700 13px var(--mono);color:var(--amber);margin-top:6px}
+.ctl{position:fixed;z-index:6;bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;align-items:flex-end}
+.ctl.l{left:max(16px,env(safe-area-inset-left,0px))}
+.ctl.r{right:max(16px,env(safe-area-inset-right,0px))}
+.pad{width:78px;height:78px;border-radius:18px;border:1px solid rgba(255,255,255,.18);background:var(--panel);color:var(--ink);
+  font:700 11px var(--mono);letter-spacing:.06em;display:grid;place-items:center;touch-action:none;cursor:pointer;backdrop-filter:blur(6px)}
+.pad svg{width:30px;height:30px;fill:currentColor}
+.pad.on{background:rgba(255,181,71,.25);border-color:var(--amber);color:var(--amber)}
+.pad.gas{height:120px;width:82px}
+.stack{display:flex;flex-direction:column;gap:10px}
+.pad.small{height:55px}
+@media (hover:hover) and (pointer:fine){.ctl{display:none}}
+.keys{display:none}
+@media (hover:hover) and (pointer:fine){.keys{display:block}}
+#overlay{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:radial-gradient(120% 90% at 50% 100%,rgba(255,181,71,.16),transparent 60%),rgba(6,8,14,.82);
+  padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));overflow:auto}
+.card{max-width:520px;width:100%;display:flex;flex-direction:column;gap:18px}
+.eyebrow{font-size:11px;letter-spacing:.28em;color:var(--amber);text-transform:uppercase}
+h1{margin:0;font:800 clamp(38px,9vw,64px)/.95 var(--display);text-wrap:balance}
+.lede{margin:0;color:var(--dim);font-size:13px;line-height:1.6;max-width:46ch}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.sw{width:38px;height:38px;border-radius:50%;border:2px solid transparent;cursor:pointer}
+.sw[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 3px var(--night) inset}
+.go{align-self:flex-start;padding:16px 30px;border-radius:14px;border:0;background:var(--amber);color:#1a1205;font:800 16px var(--display);letter-spacing:.04em;cursor:pointer}
+.help{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:12px;color:var(--dim);margin:0}
+.help dt{color:var(--ink);font-weight:700}
+.help dd{margin:0}
+.rotate{display:none;font-size:12px;color:var(--amber)}
+@media (orientation:portrait) and (pointer:coarse){
+  .rotate{display:block}
+  .speedo{bottom:auto;top:calc(150px + env(safe-area-inset-top,0px))}
+  .combo{top:calc(230px + env(safe-area-inset-top,0px))}
+}
+@media (prefers-reduced-motion:reduce){.combo{transition:none}}
+</style>
+
+<canvas id="gl"></canvas>
+
+<div class="hud tl">
+  <div class="cash">$ <span id="cash">0</span></div>
+  <div class="sub">Рекорд дрифт: <span id="best">0</span></div>
+  <div class="sub keys">W A S D · Space кол тормоз · R кайра</div>
+</div>
+<div class="hud tr">
+  <canvas id="map" width="248" height="248"></canvas>
+  <div class="stack">
+    <button class="iconbtn" id="mute" aria-label="Үндү өчүрүү">ҮН</button>
+    <button class="iconbtn" id="reset" aria-label="Машинаны жолго кайтаруу">↺</button>
+  </div>
+</div>
+<div class="hud combo" id="combo"><b id="comboPts">0</b><small id="comboTxt">ДРИФТ</small></div>
+<div class="hud speedo">
+  <div class="kmh" id="kmh">0</div>
+  <div class="unit">КМ/С</div>
+  <div class="rpm"><i id="rpm"></i></div>
+  <div class="gear" id="gear">N</div>
+</div>
+
+<div class="ctl l">
+  <div class="pad" data-ctl="left" aria-label="Солго"><svg viewBox="0 0 24 24"><path d="M15 4 6 12l9 8z"/></svg></div>
+  <div class="pad" data-ctl="right" aria-label="Оңго"><svg viewBox="0 0 24 24"><path d="m9 4 9 8-9 8z"/></svg></div>
+</div>
+<div class="ctl r">
+  <div class="stack">
+    <div class="pad small" data-ctl="brake">ТОРМОЗ</div>
+    <div class="pad small" data-ctl="hb">ДРИФТ</div>
+  </div>
+  <div class="pad gas" data-ctl="gas">ГАЗ</div>
+</div>
+
+<div id="overlay">
+  <div class="card">
+    <div class="eyebrow">Ачык шаар · Түнкү айдоо</div>
+    <h1>Түнкү Көчө</h1>
+    <p class="lede">Түнкү шаардын көчөлөрүндө эркин айдап, бурулуштарда дрифт кылыңыз. Дрифт канча узун жана тайгак болсо, ошончо көп акча топтойсуз. Бош асфальт аянттары дрифт машыгуусуна ыңгайлуу.</p>
+    <div class="row" id="paints" aria-label="Машинанын түсү"></div>
+    <dl class="help">
+      <dt>Газ / тормоз</dt><dd>W, S же ГАЗ, ТОРМОЗ баскычтары</dd>
+      <dt>Руль</dt><dd>A, D же ◀ ▶</dd>
+      <dt>Дрифт</dt><dd>Бурулушта Space же ДРИФТ басып, газды кое бербеңиз</dd>
+    </dl>
+    <div class="rotate">Телефонду жаткырып кармасаңыз, ыңгайлуураак болот.</div>
+    <button class="go" id="start">Айдоо</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+// ---------- Негизги орнотуулар ----------
+const P = 70, R = 18, N = 5, HALF = N * P;
+const renderer = new THREE.WebGLRenderer({canvas: document.getElementById('gl'), antialias: true, powerPreference: 'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+renderer.setSize(innerWidth, innerHeight);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x070a12);
+scene.fog = new THREE.FogExp2(0x0b0f1c, 0.0062);
+const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.3, 700);
+
+scene.add(new THREE.HemisphereLight(0x5b6c9e, 0x14121a, 0.75));
+const moon = new THREE.DirectionalLight(0x9fb3ff, 0.35);
+moon.position.set(-120, 200, -80);
+scene.add(moon);
+
+const rnd = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+// ---------- Текстуралар ----------
+function windowTexture(seedLit){
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#0b0e16'; g.fillRect(0, 0, 256, 256);
+  const lit = ['#ffd58a', '#ffe7b8', '#ffc36b', '#bfe3ff', '#ffe0a0'];
+  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++){
+    const on = Math.random() < seedLit;
+    g.fillStyle = on ? lit[(Math.random() * lit.length) | 0] : (Math.random() < .5 ? '#161d2b' : '#1c2436');
+    g.fillRect(x * 32 + 7, y * 32 + 8, 18, 17);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  return t;
+}
+function glowTexture(){
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gr.addColorStop(0, 'rgba(255,190,100,0.55)');
+  gr.addColorStop(0.45, 'rgba(255,160,70,0.18)');
+  gr.addColorStop(1, 'rgba(255,140,60,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+  return new THREE.CanvasTexture(c);
+}
+
+// ---------- Шаар ----------
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(HALF * 2 + 260, HALF * 2 + 260),
+  new THREE.MeshStandardMaterial({color: 0x23262d, roughness: 0.82, metalness: 0.05}));
+ground.rotation.x = -Math.PI / 2;
+scene.add(ground);
+
+const boxes = [];      // соктугушуу үчүн
+const mapBlocks = [];  // мини-карта үчүн
+const buildGeoms = [[], []];
+const roofLights = [];
+const lots = [];
+const sidewalkPos = [];
+
+function addBuilding(x, z, w, d, h){
+  const g = new THREE.BoxGeometry(w, h, d);
+  const uv = g.attributes.uv;
+  const ou = ((Math.random() * 8) | 0) / 8, ov = ((Math.random() * 8) | 0) / 8;
+  for (let f = 0; f < 6; f++){
+    for (let k = 0; k < 4; k++){
+      const i = f * 4 + k;
+      if (f === 2 || f === 3){ uv.setXY(i, 0.001, 0.001); continue; }
+      const su = (f < 2 ? d : w) / 32, sv = h / 28;
+      uv.setXY(i, uv.getX(i) * su + ou, uv.getY(i) * sv + ov);
+    }
+  }
+  g.translate(x, h / 2, z);
+  buildGeoms[Math.random() < 0.5 ? 0 : 1].push(g.toNonIndexed());
+  if (h > 55) roofLights.push(new THREE.Vector3(x, h + 0.6, z));
+}
+
+for (let i = -N; i < N; i++) for (let j = -N; j < N; j++){
+  const x0 = i * P + R / 2, x1 = (i + 1) * P - R / 2;
+  const z0 = j * P + R / 2, z1 = (j + 1) * P - R / 2;
+  const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+  const isLot = (i === 0 && j === 1) || (i === -2 && j === -3) || (i === 2 && j === -1) || (i === -4 && j === 2) || Math.random() < 0.06;
+  if (isLot){ lots.push({cx, cz, size: x1 - x0}); mapBlocks.push({x0, z0, x1, z1, lot: true}); continue; }
+  sidewalkPos.push([cx, cz]);
+  const inner = 3, gap = 1.2;
+  const bx0 = x0 + inner, bz0 = z0 + inner, bs = (x1 - x0) - inner * 2;
+  const dist = Math.hypot(cx, cz) / HALF;
+  const tall = 1 - clamp(dist, 0, 1);
+  const split = Math.random() < 0.55 ? 2 : 1;
+  const splitZ = Math.random() < 0.5 ? 2 : 1;
+  const cw = bs / split, cd = bs / splitZ;
+  for (let a = 0; a < split; a++) for (let b = 0; b < splitZ; b++){
+    const h = rnd(10, 34) + tall * tall * rnd(20, 95);
+    addBuilding(bx0 + cw * (a + .5), bz0 + cd * (b + .5), cw - gap, cd - gap, h);
+  }
+  boxes.push({x0: bx0, z0: bz0, x1: bx0 + bs, z1: bz0 + bs});
+  mapBlocks.push({x0, z0, x1, z1, lot: false});
+}
+
+function mergeGeoms(list){
+  let count = 0; list.forEach(g => count += g.attributes.position.count);
+  const pos = new Float32Array(count * 3), nor = new Float32Array(count * 3), uv = new Float32Array(count * 2);
+  let o = 0;
+  list.forEach(g => {
+    pos.set(g.attributes.position.array, o * 3);
+    nor.set(g.attributes.normal.array, o * 3);
+    uv.set(g.attributes.uv.array, o * 2);
+    o += g.attributes.position.count;
+  });
+  const m = new THREE.BufferGeometry();
+  m.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  m.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  m.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  return m;
+}
+[0.32, 0.22].forEach((lit, k) => {
+  if (!buildGeoms[k].length) return;
+  const tex = windowTexture(lit);
+  const mat = new THREE.MeshLambertMaterial({map: tex, color: 0x6a7186, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.95});
+  scene.add(new THREE.Mesh(mergeGeoms(buildGeoms[k]), mat));
+});
+
+// Тротуарлар
+const swGeo = new THREE.BoxGeometry(P - R, 0.22, P - R);
+const sw = new THREE.InstancedMesh(swGeo, new THREE.MeshLambertMaterial({color: 0x3a3e48}), sidewalkPos.length);
+const dummy = new THREE.Object3D();
+sidewalkPos.forEach(([x, z], k) => { dummy.position.set(x, 0.11, z); dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1); dummy.updateMatrix(); sw.setMatrixAt(k, dummy.matrix); });
+scene.add(sw);
+
+// Дрифт аянттары жана конустар
+const lotMat = new THREE.MeshStandardMaterial({color: 0x2c2f37, roughness: 0.7});
+const lineMat = new THREE.MeshBasicMaterial({color: 0xd9dbe2});
+const coneGeo = new THREE.ConeGeometry(0.35, 0.9, 10);
+const conePositions = [];
+lots.forEach(l => {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(l.size, l.size), lotMat);
+  m.rotation.x = -Math.PI / 2; m.position.set(l.cx, 0.02, l.cz); scene.add(m);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(9.6, 10, 48), lineMat);
+  ring.rotation.x = -Math.PI / 2; ring.position.set(l.cx, 0.03, l.cz); scene.add(ring);
+  for (let a = 0; a < 8; a++){ const t = a / 8 * Math.PI * 2; conePositions.push([l.cx + Math.cos(t) * 4, l.cz + Math.sin(t) * 4]); }
+});
+const cones = new THREE.InstancedMesh(coneGeo, new THREE.MeshLambertMaterial({color: 0xff7a1a, emissive: 0x401800}), Math.max(1, conePositions.length));
+conePositions.forEach(([x, z], k) => { dummy.position.set(x, 0.45, z); dummy.updateMatrix(); cones.setMatrixAt(k, dummy.matrix); });
+scene.add(cones);
+
+// Жол белгилери
+const dashes = [];
+for (let k = -N; k <= N; k++){
+  for (let s = -HALF; s < HALF; s += 8){
+    const local = ((s % P) + P) % P;
+    if (local < R / 2 + 2 || local > P - R / 2 - 2) continue;
+    dashes.push([k * P, s + 2, 0]);
+    dashes.push([s + 2, k * P, 1]);
+  }
+}
+const dashMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.28, 3.2), new THREE.MeshBasicMaterial({color: 0xc9b88a}), dashes.length);
+dashes.forEach(([x, z, rot], k) => { dummy.position.set(x, 0.03, z); dummy.rotation.set(-Math.PI / 2, 0, rot ? Math.PI / 2 : 0); dummy.updateMatrix(); dashMesh.setMatrixAt(k, dummy.matrix); });
+scene.add(dashMesh);
+
+// Көчө чырактары
+const lampSpots = [];
+for (let i = -N; i <= N; i++) for (let j = -N; j <= N; j++) lampSpots.push([i * P + R / 2 + 0.8, j * P + R / 2 + 0.8]);
+const poles = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.12, 0.16, 8, 6), new THREE.MeshLambertMaterial({color: 0x2a2d35}), lampSpots.length);
+const heads = new THREE.InstancedMesh(new THREE.BoxGeometry(1.4, 0.25, 0.5), new THREE.MeshBasicMaterial({color: 0xffc46b}), lampSpots.length);
+const pools = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1),
+  new THREE.MeshBasicMaterial({map: glowTexture(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending}), lampSpots.length);
+lampSpots.forEach(([x, z], k) => {
+  dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1);
+  dummy.position.set(x, 4, z); dummy.updateMatrix(); poles.setMatrixAt(k, dummy.matrix);
+  dummy.position.set(x - 0.6, 8, z - 0.6); dummy.rotation.y = Math.PI / 4; dummy.updateMatrix(); heads.setMatrixAt(k, dummy.matrix);
+  dummy.position.set(x - 2.5, 0.05, z - 2.5); dummy.rotation.set(-Math.PI / 2, 0, 0); dummy.scale.set(26, 26, 1); dummy.updateMatrix(); pools.setMatrixAt(k, dummy.matrix);
+});
+scene.add(poles, heads, pools);
+
+// Үстүнкү кызыл чырактар
+const roofMat = new THREE.MeshBasicMaterial({color: 0xff2a2a});
+const roof = new THREE.InstancedMesh(new THREE.SphereGeometry(0.5, 8, 6), roofMat, Math.max(1, roofLights.length));
+dummy.rotation.set(0, 0, 0); dummy.scale.set(1, 1, 1);
+roofLights.forEach((p, k) => { dummy.position.copy(p); dummy.updateMatrix(); roof.setMatrixAt(k, dummy.matrix); });
+scene.add(roof);
+
+// Шаардын чек арасы
+const wallMat = new THREE.MeshLambertMaterial({color: 0x3b3f4a, emissive: 0x2a1a06});
+const EDGE = HALF + R / 2 + 1.5;
+[[0, EDGE, EDGE * 2, 1.4], [0, -EDGE, EDGE * 2, 1.4], [EDGE, 0, 1.4, EDGE * 2], [-EDGE, 0, 1.4, EDGE * 2]].forEach(([x, z, w, d]) => {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, 1.1, d), wallMat); m.position.set(x, 0.55, z); scene.add(m);
+});
+
+// ---------- Оюнчунун машинасы ----------
+const PAINTS = [['#e8edf5', 'Ак'], ['#d23a2e', 'Кызыл'], ['#1f5fd1', 'Көк'], ['#ffb547', 'Сары'], ['#17191f', 'Кара'], ['#2fa37a', 'Жашыл']];
+const carGroup = new THREE.Group();
+const body = new THREE.Group();
+carGroup.add(body);
+const paintMat = new THREE.MeshStandardMaterial({color: PAINTS[1][0], metalness: 0.55, roughness: 0.32});
+const darkMat = new THREE.MeshStandardMaterial({color: 0x0d0f14, metalness: 0.2, roughness: 0.5});
+const glassMat = new THREE.MeshStandardMaterial({color: 0x10151f, metalness: 0.8, roughness: 0.15});
+function part(geo, mat, x, y, z, parent){ const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); (parent || body).add(m); return m; }
+part(new THREE.BoxGeometry(1.92, 0.5, 4.3), paintMat, 0, 0.58, 0);
+part(new THREE.BoxGeometry(1.86, 0.18, 1.3), paintMat, 0, 0.88, 1.35);
+part(new THREE.BoxGeometry(1.6, 0.48, 2.0), glassMat, 0, 1.06, -0.25);
+part(new THREE.BoxGeometry(1.5, 0.08, 1.8), paintMat, 0, 1.33, -0.3);
+part(new THREE.BoxGeometry(1.95, 0.22, 4.35), darkMat, 0, 0.32, 0);
+part(new THREE.BoxGeometry(1.9, 0.06, 0.35), darkMat, 0, 1.12, -2.05); // спойлер
+part(new THREE.BoxGeometry(0.08, 0.3, 0.1), darkMat, 0.7, 0.95, -2.05);
+part(new THREE.BoxGeometry(0.08, 0.3, 0.1), darkMat, -0.7, 0.95, -2.05);
+const headMat = new THREE.MeshBasicMaterial({color: 0xfff4dc});
+const tailMat = new THREE.MeshBasicMaterial({color: 0x8a0d0d});
+part(new THREE.BoxGeometry(0.45, 0.12, 0.05), headMat, 0.62, 0.68, 2.16);
+part(new THREE.BoxGeometry(0.45, 0.12, 0.05), headMat, -0.62, 0.68, 2.16);
+part(new THREE.BoxGeometry(1.6, 0.1, 0.05), tailMat, 0, 0.72, -2.16);
+const glowMat = new THREE.MeshBasicMaterial({map: glowTexture(), color: 0xffb547, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.7});
+const under = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 6.4), glowMat);
+under.rotation.x = -Math.PI / 2; under.position.y = 0.06; carGroup.add(under);
+
+const wheelGeo = new THREE.CylinderGeometry(0.34, 0.34, 0.28, 16);
+wheelGeo.rotateZ(Math.PI / 2);
+const tireMat = new THREE.MeshStandardMaterial({color: 0x111214, roughness: 0.9});
+const rimMat = new THREE.MeshStandardMaterial({color: 0x9aa0ab, metalness: 0.9, roughness: 0.3});
+const rimGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.3, 6); rimGeo.rotateZ(Math.PI / 2);
+const wheels = [];
+[[0.9, 1.35, true], [-0.9, 1.35, true], [0.9, -1.35, false], [-0.9, -1.35, false]].forEach(([x, z, front]) => {
+  const pivot = new THREE.Group(); pivot.position.set(x, 0.34, z); carGroup.add(pivot);
+  const spin = new THREE.Group(); pivot.add(spin);
+  spin.add(new THREE.Mesh(wheelGeo, tireMat)); spin.add(new THREE.Mesh(rimGeo, rimMat));
+  wheels.push({pivot, spin, front});
+});
+const spot = new THREE.SpotLight(0xfff1d6, 2.4, 80, 0.5, 0.55, 1.2);
+spot.position.set(0, 0.8, 2.0);
+const spotTarget = new THREE.Object3D(); spotTarget.position.set(0, 0, 22);
+carGroup.add(spot, spotTarget); spot.target = spotTarget;
+const tailGlow = new THREE.PointLight(0xff2a1a, 0.0, 9, 2); tailGlow.position.set(0, 0.7, -2.6); carGroup.add(tailGlow);
+scene.add(carGroup);
+
+const car = {x: 0, z: -10, h: 0, vx: 0, vz: 0, yaw: 0, steer: 0, wheelRot: 0, vf: 0, vl: 0};
+
+// ---------- Жол кыймылы (боттор) ----------
+const TRAFFIC_COLORS = [0x5b6475, 0xa8adb8, 0x283a5c, 0x7a1e1e, 0x2d4a3a, 0xc9c3b5, 0x3e3e46];
+const traffic = [];
+const lanes = [];
+for (let k = -N + 1; k < N; k++) [1, -1].forEach(dir => { lanes.push({axis: 'z', k, dir}); lanes.push({axis: 'x', k, dir}); });
+lanes.sort(() => Math.random() - .5);
+for (let n = 0; n < 16 && n < lanes.length; n++){
+  const L = lanes[n];
+  const g = new THREE.Group();
+  const col = TRAFFIC_COLORS[n % TRAFFIC_COLORS.length];
+  const mat = new THREE.MeshLambertMaterial({color: col});
+  const isVan = Math.random() < 0.25;
+  const b1 = new THREE.Mesh(new THREE.BoxGeometry(1.9, isVan ? 1.6 : 0.7, isVan ? 4.8 : 4.3), mat); b1.position.y = isVan ? 1.15 : 0.7; g.add(b1);
+  if (!isVan){ const b2 = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.55, 2.1), new THREE.MeshLambertMaterial({color: 0x10141c})); b2.position.set(0, 1.3, -0.2); g.add(b2); }
+  const hl = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.12, 0.05), headMat); hl.position.set(0, 0.75, isVan ? 2.42 : 2.17); g.add(hl);
+  const tl = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.12, 0.05), new THREE.MeshBasicMaterial({color: 0xd01818})); tl.position.set(0, 0.8, isVan ? -2.42 : -2.17); g.add(tl);
+  const pool = new THREE.Mesh(new THREE.PlaneGeometry(4, 10), new THREE.MeshBasicMaterial({map: glowTexture(), color: 0xfff0d0, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.6}));
+  pool.rotation.x = -Math.PI / 2; pool.position.set(0, 0.04, 6.5); g.add(pool);
+  scene.add(g);
+  const lane = L.k * P + (L.axis === 'z' ? -4 * L.dir : 4 * L.dir);
+  traffic.push({g, axis: L.axis, lane, dir: L.dir, pos: rnd(-HALF, HALF), speed: rnd(9, 15), base: 0, stall: 0});
+}
+traffic.forEach(t => t.base = t.speed);
+
+// ---------- Дөңгөлөк издери ----------
+const SKID_N = 420;
+const skidMat = new THREE.MeshBasicMaterial({color: 0x050505, transparent: true, opacity: 0.5, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2});
+const skidGeo = new THREE.PlaneGeometry(0.3, 0.55);
+const skids = [];
+for (let k = 0; k < SKID_N; k++){ const m = new THREE.Mesh(skidGeo, skidMat); m.visible = false; scene.add(m); skids.push(m); }
+let skidIdx = 0, skidDist = 0;
+function dropSkid(x, z, h){ const m = skids[skidIdx]; skidIdx = (skidIdx + 1) % SKID_N; m.visible = true; m.position.set(x, 0.04, z); m.rotation.set(-Math.PI / 2, 0, h); }
+
+// ---------- Башкаруу ----------
+const keys = {};
+addEventListener('keydown', e => { keys[e.code] = true; if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault(); if (e.code === 'KeyR') respawn(); });
+addEventListener('keyup', e => { keys[e.code] = false; });
+const touch = {left: 0, right: 0, gas: 0, brake: 0, hb: 0};
+document.querySelectorAll('[data-ctl]').forEach(el => {
+  const k = el.dataset.ctl;
+  const on = e => { e.preventDefault(); touch[k] = 1; el.classList.add('on'); try { el.setPointerCapture(e.pointerId); } catch (_) {} };
+  const off = () => { touch[k] = 0; el.classList.remove('on'); };
+  el.addEventListener('pointerdown', on);
+  el.addEventListener('pointerup', off);
+  el.addEventListener('pointercancel', off);
+  el.addEventListener('lostpointercapture', off);
+  el.addEventListener('contextmenu', e => e.preventDefault());
+});
+function readInput(){
+  const gas = (keys.KeyW || keys.ArrowUp || touch.gas) ? 1 : 0;
+  const brake = (keys.KeyS || keys.ArrowDown || touch.brake) ? 1 : 0;
+  const hb = (keys.Space || touch.hb) ? 1 : 0;
+  const steer = ((keys.KeyD || keys.ArrowRight || touch.right) ? 1 : 0) - ((keys.KeyA || keys.ArrowLeft || touch.left) ? 1 : 0);
+  return {gas, brake, hb, steer};
+}
+
+// ---------- Физика ----------
+const ENGINE = 14, MAX_SPEED = 60, WHEELBASE = 2.7;
+let input = {gas: 0, brake: 0, hb: 0, steer: 0};
+let impact = 0;
+function stepCar(dt){
+  const target = input.steer;
+  const rate = target === 0 ? 7 : 4.5;
+  car.steer += (target - car.steer) * (1 - Math.exp(-rate * dt));
+  const s = Math.sin(car.h), c = Math.cos(car.h);
+  let vf = car.vx * s + car.vz * c;
+  let vl = -car.vx * c + car.vz * s;
+  const speed = Math.hypot(car.vx, car.vz);
+  const slip = Math.abs(vl);
+
+  // Узунунан: газ, тормоз, каршылык
+  if (input.gas) vf += ENGINE * Math.max(0, 1 - vf / MAX_SPEED) * dt;
+  if (input.brake){ if (vf > 0.5) vf -= 26 * dt; else vf = Math.max(vf - 7 * dt, -13); }
+  if (input.hb) vf -= Math.sign(vf) * Math.min(Math.abs(vf), 5 * dt);
+  if (!input.gas && !input.brake) vf -= Math.sign(vf) * Math.min(Math.abs(vf), 1.4 * dt);
+  vf -= vf * Math.abs(vf) * 0.0019 * dt;
+
+  // Каптал кармоо: тайгаланганда грип төмөндөйт, дрифт ушундан чыгат
+  let grip = input.hb ? 1.1 : (slip > 3.5 ? 2.6 : 8);
+  if (slip > 3.5 && input.gas) grip *= 0.8;
+  const newVl = vl * Math.exp(-grip * dt);
+  if (vf > 2) vf += (Math.abs(vl) - Math.abs(newVl)) * 0.22; // дрифтте ылдамдыкты сактоо
+  vl = newVl;
+
+  // Бурулуш (yaw)
+  const steerAngle = car.steer * (0.56 - 0.38 * clamp(speed / 45, 0, 1));
+  const targetYaw = -vf * Math.tan(steerAngle) / WHEELBASE;
+  const k = (slip > 3.5 || input.hb) ? 2.6 : 10;
+  car.yaw += (targetYaw - car.yaw) * (1 - Math.exp(-k * dt));
+  if (input.hb && speed > 7) car.yaw += -car.steer * 2.4 * dt * Math.sign(vf);
+  if (slip > 3 && input.gas && vf > 8) car.yaw += -car.steer * 1.7 * dt;
+  car.yaw = clamp(car.yaw, -3.4, 3.4);
+
+  car.vx = s * vf - c * vl;
+  car.vz = c * vf + s * vl;
+  car.vf = vf; car.vl = vl;
+  car.h += car.yaw * dt;
+  car.x += car.vx * dt;
+  car.z += car.vz * dt;
+  car.wheelRot += vf / 0.34 * dt;
+
+  collide();
+}
+function collide(){
+  const r = 1.7;
+  for (const b of boxes){
+    if (car.x > b.x0 - r && car.x < b.x1 + r && car.z > b.z0 - r && car.z < b.z1 + r){
+      const dl = car.x - (b.x0 - r), dr = (b.x1 + r) - car.x, dd = car.z - (b.z0 - r), du = (b.z1 + r) - car.z;
+      const m = Math.min(dl, dr, dd, du);
+      if (m === dl){ car.x = b.x0 - r; if (car.vx > 0){ impact = Math.max(impact, car.vx); car.vx *= -0.25; car.vz *= 0.85; } }
+      else if (m === dr){ car.x = b.x1 + r; if (car.vx < 0){ impact = Math.max(impact, -car.vx); car.vx *= -0.25; car.vz *= 0.85; } }
+      else if (m === dd){ car.z = b.z0 - r; if (car.vz > 0){ impact = Math.max(impact, car.vz); car.vz *= -0.25; car.vx *= 0.85; } }
+      else { car.z = b.z1 + r; if (car.vz < 0){ impact = Math.max(impact, -car.vz); car.vz *= -0.25; car.vx *= 0.85; } }
+      car.yaw *= 0.5;
+    }
+  }
+  const lim = EDGE - 2;
+  if (Math.abs(car.x) > lim){ impact = Math.max(impact, Math.abs(car.vx)); car.x = Math.sign(car.x) * lim; car.vx *= -0.3; }
+  if (Math.abs(car.z) > lim){ impact = Math.max(impact, Math.abs(car.vz)); car.z = Math.sign(car.z) * lim; car.vz *= -0.3; }
+  for (const t of traffic){
+    const p = t.g.position;
+    const dx = car.x - p.x, dz = car.z - p.z, d = Math.hypot(dx, dz);
+    if (d < 3.3 && d > 0.001){
+      const nx = dx / d, nz = dz / d;
+      car.x = p.x + nx * 3.3; car.z = p.z + nz * 3.3;
+      const vn = car.vx * nx + car.vz * nz;
+      if (vn < 0){ impact = Math.max(impact, -vn); car.vx -= 1.4 * vn * nx; car.vz -= 1.4 * vn * nz; }
+      t.stall = 2;
+    }
+  }
+}
+function respawn(){
+  let best = null, bd = 1e9;
+  for (let i = -N; i <= N; i++) for (let j = -N; j <= N; j++){
+    const d = Math.hypot(i * P - car.x, j * P - car.z);
+    if (d < bd){ bd = d; best = [i * P, j * P]; }
+  }
+  car.x = best[0]; car.z = best[1]; car.vx = car.vz = car.yaw = 0;
+  endCombo(false);
+}
+document.getElementById('reset').addEventListener('click', respawn);
+
+// ---------- Упай / акча ----------
+let cash = 0, best = 0, combo = 0, comboMult = 1, comboIdle = 0, comboTime = 0, popupTimer = 0;
+try { cash = +(localStorage.getItem('tk_cash') || 0); best = +(localStorage.getItem('tk_best') || 0); } catch (_) {}
+const $ = id => document.getElementById(id);
+const comboEl = $('combo');
+function save(){ try { localStorage.setItem('tk_cash', cash); localStorage.setItem('tk_best', best); } catch (_) {} }
+function refreshTop(){ $('cash').textContent = Math.floor(cash).toLocaleString('ru-RU'); $('best').textContent = Math.floor(best).toLocaleString('ru-RU'); }
+refreshTop();
+function endCombo(banked){
+  if (combo > 0){
+    const total = Math.floor(combo * comboMult);
+    if (banked){
+      cash += total / 10; if (total > best) best = total;
+      $('comboPts').textContent = '+$' + Math.floor(total / 10).toLocaleString('ru-RU');
+      $('comboTxt').textContent = 'ДРИФТ ' + total.toLocaleString('ru-RU') + ' · x' + comboMult;
+      comboEl.classList.remove('crash');
+    } else {
+      $('comboPts').textContent = 'УРУЛДУ';
+      $('comboTxt').textContent = 'дрифт күйүп кетти';
+      comboEl.classList.add('crash');
+    }
+    comboEl.classList.add('show'); popupTimer = 1.6;
+    save(); refreshTop();
+  }
+  combo = 0; comboMult = 1; comboTime = 0;
+}
+
+// ---------- Үн ----------
+let audio = null, muted = false;
+function initAudio(){
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const master = ctx.createGain(); master.gain.value = 0.35; master.connect(ctx.destination);
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.connect(master);
+    const eg = ctx.createGain(); eg.gain.value = 0.25; eg.connect(lp);
+    const o1 = ctx.createOscillator(); o1.type = 'sawtooth'; o1.connect(eg); o1.start();
+    const o2 = ctx.createOscillator(); o2.type = 'square'; const g2 = ctx.createGain(); g2.gain.value = 0.35; o2.connect(g2); g2.connect(eg); o2.start();
+    const buf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+    const d = buf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const noise = ctx.createBufferSource(); noise.buffer = buf; noise.loop = true;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2600; bp.Q.value = 6;
+    const sg = ctx.createGain(); sg.gain.value = 0; noise.connect(bp); bp.connect(sg); sg.connect(master); noise.start();
+    audio = {ctx, master, lp, o1, o2, sg};
+  } catch (_) { audio = null; }
+}
+$('mute').addEventListener('click', () => {
+  muted = !muted; $('mute').textContent = muted ? 'ҮН ✕' : 'ҮН';
+  $('mute').setAttribute('aria-label', muted ? 'Үндү күйгүзүү' : 'Үндү өчүрүү');
+  if (audio) audio.master.gain.setTargetAtTime(muted ? 0 : 0.35, audio.ctx.currentTime, 0.05);
+});
+
+// ---------- Мини-карта ----------
+const mapCv = $('map'), mg = mapCv.getContext('2d');
+function drawMap(){
+  const W = mapCv.width, S = W / 340;
+  mg.clearRect(0, 0, W, W);
+  mg.save();
+  mg.beginPath(); mg.arc(W / 2, W / 2, W / 2 - 2, 0, Math.PI * 2); mg.clip();
+  mg.translate(W / 2, W / 2);
+  mg.rotate(Math.PI + car.h);
+  mg.scale(-S, S);
+  mg.translate(-car.x, -car.z);
+  for (const b of mapBlocks){
+    if (Math.abs(b.x0 - car.x) > 260 || Math.abs(b.z0 - car.z) > 260) continue;
+    mg.fillStyle = b.lot ? 'rgba(255,181,71,.35)' : 'rgba(150,160,185,.38)';
+    mg.fillRect(b.x0, b.z0, b.x1 - b.x0, b.z1 - b.z0);
+  }
+  mg.fillStyle = 'rgba(220,225,235,.75)';
+  for (const t of traffic){ const p = t.g.position; mg.fillRect(p.x - 2, p.z - 2, 4, 4); }
+  mg.restore();
+  mg.fillStyle = '#ffb547';
+  mg.beginPath(); mg.moveTo(W / 2, W / 2 - 13); mg.lineTo(W / 2 + 9, W / 2 + 10); mg.lineTo(W / 2, W / 2 + 5); mg.lineTo(W / 2 - 9, W / 2 + 10); mg.closePath(); mg.fill();
+}
+
+// ---------- Түс тандоо ----------
+let paintIdx = 1;
+try { const v = +localStorage.getItem('tk_paint'); if (v >= 0 && v < PAINTS.length) paintIdx = v; } catch (_) {}
+const paintsEl = $('paints');
+PAINTS.forEach(([hex, name], k) => {
+  const b = document.createElement('button');
+  b.className = 'sw'; b.style.background = hex; b.id = 'paint-' + k;
+  b.setAttribute('aria-label', name); b.setAttribute('aria-pressed', k === paintIdx);
+  b.addEventListener('click', () => {
+    paintIdx = k; paintMat.color.set(hex);
+    paintsEl.querySelectorAll('.sw').forEach((x, j) => x.setAttribute('aria-pressed', j === k));
+    try { localStorage.setItem('tk_paint', k); } catch (_) {}
+  });
+  paintsEl.appendChild(b);
+});
+paintMat.color.set(PAINTS[paintIdx][0]);
+
+// ---------- Оюн цикли ----------
+let running = false, last = performance.now(), shake = 0, t0 = 0;
+const camPos = new THREE.Vector3(0, 5, -20);
+const lookAt = new THREE.Vector3();
+const GEARS = [0, 13, 24, 35, 45, 54, 70];
+$('start').addEventListener('click', () => {
+  $('overlay').hidden = true;
+  if (!audio) initAudio();
+  if (audio && audio.ctx.state === 'suspended') audio.ctx.resume();
+  running = true; last = performance.now();
+});
+
+function frame(now){
+  requestAnimationFrame(frame);
+  let dt = Math.min(0.05, (now - last) / 1000); last = now; t0 += dt;
+  if (running){
+    input = readInput();
+    const sub = 4, h = dt / sub;
+    for (let i = 0; i < sub; i++) stepCar(h);
+  }
+
+  // Боттор
+  for (const t of traffic){
+    if (t.stall > 0){ t.stall -= dt; t.speed = Math.max(0, t.speed - 20 * dt); }
+    else t.speed += (t.base - t.speed) * Math.min(1, dt);
+    t.pos += t.dir * t.speed * dt;
+    if (t.pos > HALF) t.pos = -HALF; if (t.pos < -HALF) t.pos = HALF;
+    if (t.axis === 'z'){ t.g.position.set(t.lane, 0, t.pos); t.g.rotation.y = t.dir > 0 ? 0 : Math.PI; }
+    else { t.g.position.set(t.pos, 0, t.lane); t.g.rotation.y = t.dir > 0 ? Math.PI / 2 : -Math.PI / 2; }
+  }
+
+  const speed = Math.hypot(car.vx, car.vz);
+  const kmh = speed * 3.6;
+  const driftAng = speed > 6 ? Math.atan2(Math.abs(car.vl), Math.abs(car.vf)) * 180 / Math.PI : 0;
+  const drifting = running && driftAng > 12 && kmh > 25 && car.vf > 0;
+
+  // Дрифт упайы
+  if (impact > 5){ shake = Math.min(1, impact / 18); if (combo > 0) endCombo(false); }
+  impact = 0;
+  if (drifting){
+    combo += driftAng * speed * dt * 0.6;
+    comboTime += dt; comboIdle = 0;
+    comboMult = 1 + Math.min(4, Math.floor(comboTime / 2.5));
+    $('comboPts').textContent = Math.floor(combo * comboMult).toLocaleString('ru-RU');
+    $('comboTxt').textContent = 'ДРИФТ x' + comboMult + ' · ' + Math.round(driftAng) + '°';
+    comboEl.classList.remove('crash'); comboEl.classList.add('show'); popupTimer = 0;
+  } else if (combo > 0){
+    comboIdle += dt;
+    if (comboIdle > 1.3) endCombo(true);
+  }
+  if (popupTimer > 0){ popupTimer -= dt; if (popupTimer <= 0) comboEl.classList.remove('show'); }
+
+  // Издер
+  const s = Math.sin(car.h), c = Math.cos(car.h);
+  if ((Math.abs(car.vl) > 3.2 || (input.hb && speed > 4) || (input.brake && car.vf > 12)) && running){
+    skidDist += speed * dt;
+    if (skidDist > 0.45){
+      skidDist = 0;
+      [0.82, -0.82].forEach(off => dropSkid(car.x - c * off - s * 1.35, car.z + s * off - c * 1.35, car.h));
+    }
+  }
+
+  // Машинанын визуалы
+  carGroup.position.set(car.x, 0, car.z);
+  carGroup.rotation.y = car.h;
+  body.rotation.z += (clamp(car.yaw * speed * 0.0045, -0.09, 0.09) - body.rotation.z) * Math.min(1, dt * 6);
+  const pitch = input.brake && car.vf > 2 ? 0.035 : (input.gas ? -0.02 : 0);
+  body.rotation.x += (pitch - body.rotation.x) * Math.min(1, dt * 5);
+  wheels.forEach(w => { w.spin.rotation.x = car.wheelRot; if (w.front) w.pivot.rotation.y = -car.steer * 0.5; });
+  const braking = input.brake || input.hb;
+  tailMat.color.setHex(braking ? 0xff2a1a : 0x8a0d0d);
+  tailGlow.intensity = braking ? 1.6 : 0.4;
+  glowMat.opacity = 0.55 + Math.sin(t0 * 2) * 0.08;
+  roofMat.color.setHex(Math.sin(t0 * 3) > 0.3 ? 0xff2a2a : 0x3a0808);
+
+  // Камера
+  let dirX = s, dirZ = c;
+  if (speed > 4){ const vx = car.vx / speed, vz = car.vz / speed; dirX = s * 0.6 + vx * 0.4; dirZ = c * 0.6 + vz * 0.4; const L = Math.hypot(dirX, dirZ) || 1; dirX /= L; dirZ /= L; }
+  const back = 7 + speed * 0.04;
+  const desired = new THREE.Vector3(car.x - dirX * back, 3.1 + speed * 0.012, car.z - dirZ * back);
+  camPos.lerp(desired, 1 - Math.exp(-6 * dt));
+  camera.position.copy(camPos);
+  if (shake > 0){ camera.position.x += (Math.random() - .5) * shake; camera.position.y += (Math.random() - .5) * shake; shake = Math.max(0, shake - dt * 2.5); }
+  lookAt.set(car.x + s * 3, 1.1, car.z + c * 3);
+  camera.lookAt(lookAt);
+  const fov = 62 + clamp(speed / MAX_SPEED, 0, 1) * 18;
+  if (Math.abs(camera.fov - fov) > 0.05){ camera.fov += (fov - camera.fov) * Math.min(1, dt * 3); camera.updateProjectionMatrix(); }
+
+  // HUD
+  $('kmh').textContent = Math.round(kmh);
+  let g = 1; while (g < GEARS.length - 1 && speed > GEARS[g]) g++;
+  const lo = GEARS[g - 1], hi = GEARS[g];
+  let rpm = clamp((speed - lo) / (hi - lo), 0, 1);
+  if (car.vf < -0.5){ $('gear').textContent = 'R'; rpm = clamp(-car.vf / 13, 0, 1); }
+  else $('gear').textContent = speed < 0.5 && !input.gas ? 'N' : String(g);
+  if (input.gas && Math.abs(car.vl) > 4) rpm = Math.min(1, rpm + 0.25);
+  $('rpm').style.width = (12 + rpm * 88) + '%';
+  drawMap();
+
+  // Үн
+  if (audio && running){
+    const f = 38 + rpm * 120 + (g - 1) * 6 + (input.gas ? 10 : 0);
+    audio.o1.frequency.setTargetAtTime(f, audio.ctx.currentTime, 0.05);
+    audio.o2.frequency.setTargetAtTime(f / 2, audio.ctx.currentTime, 0.05);
+    audio.lp.frequency.setTargetAtTime(500 + rpm * 1600 + (input.gas ? 400 : 0), audio.ctx.currentTime, 0.08);
+    const screech = clamp((Math.abs(car.vl) - 2.5) / 8, 0, 1) * (speed > 5 ? 1 : 0);
+    audio.sg.gain.setTargetAtTime(screech * 0.22, audio.ctx.currentTime, 0.05);
+  }
+
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(frame);
+
+addEventListener('resize', () => {
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+});
+document.addEventListener('visibilitychange', () => {
+  if (!audio) return;
+  if (document.hidden) audio.ctx.suspend(); else if (running) audio.ctx.resume();
+});
+})();
+</script>
+
+</body></html>

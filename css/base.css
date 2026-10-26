@@ -1,0 +1,15 @@
+:root{
+  --night:#0a0d15; --panel:rgba(12,15,25,.72); --line:rgba(255,181,71,.28);
+  --ink:#eef0f6; --dim:#8f97ab; --amber:#ffb547; --hot:#ff5a4e; --ok:#52d6a0;
+  --display:'Unbounded','Arial Black',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--night);color:var(--ink);overflow:hidden;font-family:var(--mono);font-size:14px;
+  touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
+[hidden]{display:none!important}
+button{font-family:inherit;color:inherit}
+button:focus-visible,.card:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
